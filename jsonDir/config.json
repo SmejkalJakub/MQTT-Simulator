@@ -1,0 +1,54 @@
+{
+    "broker": "192.168.1.100",
+    "broker-port": 1883,
+    "mqtt_devices": [
+        {
+            "device_type": "thermometer",
+            "name": "Teplomer pokoj",
+            "subscribe": 0,
+            "topic": "home/living-room/temperature",
+            "type": "value",
+            "update_time": 0,
+            "value_low": "15",
+            "value_top": "25",
+            "images_dir": "None",
+            "json_dir": "None"
+        },
+        {
+            "device_type": "humidity-meter",
+            "name": "Vlhkomer pokoj",
+            "subscribe": 0,
+            "topic": "home/living-room/humidity",
+            "type": "value",
+            "update_time": 0,
+            "value_low": "0",
+            "value_top": "100",
+            "images_dir": "None",
+            "json_dir": "None"
+        },
+        {
+            "device_type": "newItem",
+            "name": "Please Fill",
+            "subscribe": 1,
+            "topic": "test/topic/image",
+            "type": "image",
+            "update_time": 2000,
+            "value_low": "10",
+            "value_top": "30",
+            "images_dir": "images",
+            "json_dir": "None"
+        },
+        {
+            "device_type": "newItem",
+            "name": "Please Fill",
+            "subscribe": 1,
+            "topic": "test/topic/json",
+            "type": "json",
+            "update_time": 2000,
+            "value_low": "10",
+            "value_top": "30",
+            "images_dir": "None",
+            "json_dir": "jsonDir"
+        }
+    ]
+}

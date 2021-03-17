@@ -1,0 +1,83 @@
+{
+    "broker": "192.168.1.100",
+    "broker-port": 1883,
+    "mqtt_devices": [
+        {
+            "device_type": "thermometer",
+            "images_dir": "None",
+            "json_dir": "None",
+            "name": "Teplomer pokoj",
+            "publish_time": 0,
+            "subscribe": 0,
+            "topic": "home/living-room/temperature",
+            "type": "value",
+            "value": "20",
+            "value_low": "15",
+            "value_top": "25"
+        },
+        {
+            "device_type": "humidity-meter",
+            "images_dir": "None",
+            "json_dir": "None",
+            "name": "Vlhkomer pokoj",
+            "publish_time": 0,
+            "subscribe": 0,
+            "topic": "home/living-room/humidity",
+            "type": "value",
+            "value": "30",
+            "value_low": "0",
+            "value_top": "100"
+        },
+        {
+            "device_type": "newItem",
+            "images_dir": "images",
+            "json_dir": "None",
+            "name": "Please Fill",
+            "publish_time": 10000,
+            "subscribe": 0,
+            "topic": "test/topic/image",
+            "type": "image",
+            "value": "20",
+            "value_low": "10",
+            "value_top": "30"
+        },
+        {
+            "device_type": "newItem",
+            "images_dir": "None",
+            "json_dir": "jsonDir",
+            "name": "Please Fill",
+            "publish_time": 10000,
+            "subscribe": 0,
+            "topic": "test/topic/json",
+            "type": "json",
+            "value": "20",
+            "value_low": "10",
+            "value_top": "30"
+        },
+        {
+            "device_type": "newItem",
+            "images_dir": "None",
+            "json_dir": "None",
+            "name": "Please Fill",
+            "publish_time": 0,
+            "subscribe": 0,
+            "topic": "test/topic/relay",
+            "type": "acutator",
+            "value": "20",
+            "value_low": "0",
+            "value_top": "0"
+        },
+        {
+            "device_type": "newItem",
+            "images_dir": "None",
+            "json_dir": "None",
+            "name": "Please Fill",
+            "publish_time": 0,
+            "subscribe": 0,
+            "topic": "Please Fill Topic",
+            "type": "none",
+            "value_low": "0",
+            "value_top": "0"
+        }
+    ]
+}
