@@ -37,9 +37,9 @@ class WidgetGallery(QDialog):
 
         label = QLabel('Broker')
         if(connected):
-            self.connectedLabel = QLabel("Conected")
+            self.connectedLabel = QLabel("Connected")
         else:
-            self.connectedLabel = QLabel("Conected")
+            self.connectedLabel = QLabel("Disconnected")
 
         button = QPushButton('Connect')
         button.clicked.connect(self.on_connect_button_clicked)
@@ -83,11 +83,9 @@ class WidgetGallery(QDialog):
         self.tableWidget.cellChanged.connect(self.cellChanged)
         self.tableWidget.itemSelectionChanged.connect(self.itemSelected)
 
-
         tab1hbox = QHBoxLayout()
         tab1hbox.setContentsMargins(5, 5, 5, 5)
         tab1hbox.addWidget(self.tableWidget)
-
 
         mainLayout = QGridLayout()
         mainLayout.addLayout(topLayout, 0, 0, 1, 2)
@@ -107,6 +105,7 @@ class WidgetGallery(QDialog):
 
     def addItem(self, table, row, column, value):
         keys = list(self.jsonData['mqtt_devices'][0].keys())
+
         if(keys[column] == "subscribe"):
             if(value == 1):
                 value = "Yes"
@@ -122,10 +121,15 @@ class WidgetGallery(QDialog):
 
         _selectedItem = selectedItem + 1
 
+        print(self.tableWidget.getItem(selectedItem))
+
         del self.jsonData['mqtt_devices'][_selectedItem]
 
         if(_selectedItem in schedulerEvents.keys()):
             scheduler.cancel(schedulerEvents[_selectedItem])
+
+        for i in range(selectedItem, self.tableWidget.rowCount()):
+            print(i)
 
         self.removeDeviceButton.setEnabled(False)
 
@@ -133,15 +137,16 @@ class WidgetGallery(QDialog):
 
         newItem = { 
                     "device_type": "newItem",
+                    "images_dir": "None",
+                    "json_dir": "None",
                     "name": "Please Fill",
+                    "publish_time": 0,
                     "subscribe": 0,
                     "topic": "Please Fill Topic",
                     "type": "none",
-                    "publish_time": 0,
+                    "value": "20",
                     "value_low": "0",
-                    "value_top": "0",
-                    "images_dir": "None",
-                    "json_dir": "None"
+                    "value_top": "0"
                   }
                 
         self.jsonData['mqtt_devices'].append(newItem)
@@ -159,6 +164,12 @@ class WidgetGallery(QDialog):
 
     def cellChanged(self, row, column):
         keys = list(self.jsonData['mqtt_devices'][row].keys())
+
+        print(column)
+        print(keys[column])
+
+        if(keys[column] == "value"):
+            client.publish(self.tableWidget.item(row, 6).text(), self.tableWidget.item(row, column).text())
 
         if(keys[column] == "subscribe"):
             if(self.tableWidget.item(row, column).text() == "Yes"):
@@ -187,6 +198,18 @@ class WidgetGallery(QDialog):
             self.connectedLabel.setText("Connected")
         except:
             self.connectedLabel.setText("Disconnected")
+
+    def changeValue(self, topic, message):
+
+        for row in range(0, self.tableWidget.rowCount()):
+            if(self.tableWidget.item(row, 6).text() == topic):
+                self.tableWidget.item(row, 8).setText(message)
+                self.tableWidget.resizeColumnsToContents()
+                self.jsonData['mqtt_devices'][row]['value'] = self.tableWidget.item(row, 8).text()
+                saveJson(json.dumps(self.jsonData))
+
+    
+
 
 def on_connect(client, userdata, flags, rc):
     global connected
@@ -289,8 +312,9 @@ def updateDevices(data):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
+    gallery.changeValue(msg.topic, (msg.payload).decode('utf-8'))
 
-    pass
+
     #if(type(msg.payload) == bytes):
     #    S = 10
     #    ran = ''.join(random.choices(string.ascii_uppercase + string.digits, k = S))    
@@ -298,9 +322,10 @@ def on_message(client, userdata, msg):
     #    image = Image.open(io.BytesIO(msg.payload))
     #    image.save("imagesOut/" + str(ran) + ".png")
     
-    #print(msg.topic + " " + str(msg.payload))
+    #print(msg.topic + " " + str(msg.payload))  
 
 if __name__ == '__main__':
+    
     if(os.path.exists('config.json')):
         with open('config.json') as f:
             data = json.load(f)
