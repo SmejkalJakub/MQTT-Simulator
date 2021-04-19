@@ -310,44 +310,37 @@ def updateDevices(data):
             if(deviceData['topic'] != "" and deviceData['topic'] != "Please Fill Topic"):
                 subscribeToTopic(client, deviceData['topic'])
 
-# The callback for when a PUBLISH message is received from the server.
+# The callback for when a PUBLISH message is received from the mqtt server.
 def on_message(client, userdata, msg):
+    # Change the value present in table
     gallery.changeValue(msg.topic, (msg.payload).decode('utf-8'))
-    
-    #if(type(msg.payload) == bytes):
-    #    S = 10
-    #    ran = ''.join(random.choices(string.ascii_uppercase + string.digits, k = S))    
-    #    print(msg.payload)
-    #    image = Image.open(io.BytesIO(msg.payload))
-    #    image.save("imagesOut/" + str(ran) + ".png")
-    
-    #print(msg.topic + " " + str(msg.payload))  
 
 if __name__ == '__main__':
     
+    # Load the data from config
     if(os.path.exists('config.json')):
         with open('config.json') as f:
             data = json.load(f)
     else:
         f = open('config.json', 'x')
 
+    # Start and configure MQTT Client
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
-
     client.on_message = on_message
-
     client.connect(data['broker'], data['broker-port'], 60)
-
     updateDevices(json.dumps(data))
 
+    # Start the scheduler;
     t = threading.Thread(target=scheduler.run)
     t.start()
 
+    # Start listening loop without blocking the whole program
     client.loop_start()
 
+    # Create the QApplication UI
     app = QApplication([])
-
     gallery = WidgetGallery(brokerAddress=data['broker'], client=client, data=json.dumps(data))
     gallery.show()
 
