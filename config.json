@@ -79,19 +79,6 @@
             "value": "false",
             "value_low": "0",
             "value_top": "0"
-        },
-        {
-            "device_type": "newItem",
-            "images_dir": "None",
-            "json_dir": "None",
-            "name": "Please Fill",
-            "publish_time": 0,
-            "subscribe": 0,
-            "topic": "Please Fill Topic",
-            "type": "none",
-            "value": "20",
-            "value_low": "0",
-            "value_top": "0"
         }
     ]
 }

@@ -313,8 +313,7 @@ def updateDevices(data):
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
     gallery.changeValue(msg.topic, (msg.payload).decode('utf-8'))
-
-
+    
     #if(type(msg.payload) == bytes):
     #    S = 10
     #    ran = ''.join(random.choices(string.ascii_uppercase + string.digits, k = S))    
