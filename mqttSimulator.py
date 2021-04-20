@@ -1,3 +1,12 @@
+"""
+MQTT Simulator for experimenting with MQTT messages.
+
+This code was created for school project and bachelor thesis
+
+Authors: Jakub Smejkal (xsmejk28)
+         Tomáš Staněk (xstane44)
+"""
+
 import io
 import os
 import sys
@@ -26,24 +35,16 @@ class WidgetGallery(QDialog):
         super(WidgetGallery, self).__init__(parent)
 
         self.setFixedWidth(900)
-
         self.originalPalette = QApplication.palette()
-
-        #self.createTopLeftGroupBox()
-        #self.createTopRightGroupBox()
-        #self.createBottomLeftTabWidget()
-        #self.createBottomRightGroupBox()
-        #self.createProgressBar()
-
+        
+        # Some basic QApplication setup
         label = QLabel('Broker')
         if(connected):
             self.connectedLabel = QLabel("Connected")
         else:
             self.connectedLabel = QLabel("Disconnected")
-
         button = QPushButton('Connect')
         button.clicked.connect(self.on_connect_button_clicked)
-        
         self.lineEdit = QLineEdit(brokerAddress)
 
         topLayout = QHBoxLayout()
@@ -62,9 +63,11 @@ class WidgetGallery(QDialog):
         self.removeDeviceButton.clicked.connect(self.removeDeviceButtonClick)
         self.removeDeviceButton.setEnabled(False)
         addDevicehbox.addWidget(self.removeDeviceButton)
+        # End of basic setup
 
+
+        # Load JSON data and setup the table widget
         self.jsonData = json.loads(data)
-
         numberOfDevices = len(self.jsonData['mqtt_devices'])
 
         self.tableWidget = QTableWidget(numberOfDevices, len(self.jsonData['mqtt_devices'][0].keys()))
@@ -95,6 +98,7 @@ class WidgetGallery(QDialog):
         self.setLayout(mainLayout)
         self.setWindowTitle("MQTT Simulator")
 
+    # Register item selection change
     def itemSelected(self):
         global selectedItem
 
@@ -102,7 +106,7 @@ class WidgetGallery(QDialog):
         selectedItem = self.tableWidget.currentItem().row()
         self.removeDeviceButton.setEnabled(True)
 
-
+    # Add new item to the device
     def addItem(self, table, row, column, value):
         keys = list(self.jsonData['mqtt_devices'][0].keys())
 
@@ -115,6 +119,7 @@ class WidgetGallery(QDialog):
         newItem = QTableWidgetItem(str(value))
         table.setItem(row, column, newItem)
 
+    # Remove button click callback(WORK IN PROGRESS)
     def removeDeviceButtonClick(self):
         global selectedItem
         self.tableWidget.removeRow(selectedItem)
@@ -133,6 +138,7 @@ class WidgetGallery(QDialog):
 
         self.removeDeviceButton.setEnabled(False)
 
+    # Add new device to the end of list 
     def addDeviceButtonClick(self):
 
         newItem = { 
@@ -158,10 +164,12 @@ class WidgetGallery(QDialog):
         for (collumn, value) in enumerate(self.jsonData['mqtt_devices'][self.tableWidget.rowCount() - 1].values()):
             self.addItem(self.tableWidget, self.tableWidget.rowCount() - 1, collumn, value)
 
+    # If app is closed all the scheduled functions should be stopped
     def closeEvent(self, test):
         global stopFlag 
         stopFlag = True
 
+    # Callback detecting change of a cell
     def cellChanged(self, row, column):
         keys = list(self.jsonData['mqtt_devices'][row].keys())
 
@@ -185,6 +193,7 @@ class WidgetGallery(QDialog):
 
         saveJson(json.dumps(self.jsonData))
 
+    # Connect button callback that will try to connect to selected MQTT broker
     def on_connect_button_clicked(self):
         client.disconnect()
         client.loop_stop()
@@ -199,8 +208,8 @@ class WidgetGallery(QDialog):
         except:
             self.connectedLabel.setText("Disconnected")
 
+    # This function is called whenever the MQTT message is received and it changes the value of desired cell
     def changeValue(self, topic, message):
-
         for row in range(0, self.tableWidget.rowCount()):
             if(self.tableWidget.item(row, 6).text() == topic):
                 self.tableWidget.item(row, 8).setText(message)
@@ -208,23 +217,27 @@ class WidgetGallery(QDialog):
                 self.jsonData['mqtt_devices'][row]['value'] = self.tableWidget.item(row, 8).text()
                 saveJson(json.dumps(self.jsonData))
 
-    
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+# Callback when MQTT client is connected
 def on_connect(client, userdata, flags, rc):
     global connected
     connected = True
     
+# Callback when MQTT client is disconnected
 def on_disconnect(client, userdata, rc):
    global connected
    connected = False
 
+# For test purposes if we want to subscribe to all topics
 def subscribeToAllTopics(client):
     client.subscribe("#", 1)
 
+# Simple function to subscribe to topic
 def subscribeToTopic(client, topic):
     client.subscribe(topic, 1)
 
+# This function will be called periodicaly for each topic that should send messages periodicaly
 def publish_message(data, scheduler, client, index):
     jsonData = json.loads(data)
 
@@ -241,13 +254,13 @@ def publish_message(data, scheduler, client, index):
     if(not stopFlag):
         schedulerEvents[index] = scheduler.enter(jsonData['publish_time'] / 1000, 2, publish_message, (json.dumps(jsonData), scheduler, client, index,))
 
-#---------------------------------------------------------------------------------------------------------------------------------------------------------
-
+# Function to save the configuration if anything changes
 def saveJson(data):
     outFile = open("config.json", "w")
     outFile.write(json.dumps(json.loads(data), indent=4, sort_keys=True))
     outFile.close()
 
+# This function serves to reset task after the cell change
 def resetTask(data, index, client):
     if(index in schedulerEvents.keys()):
         scheduler.cancel(schedulerEvents[index])
@@ -258,11 +271,13 @@ def resetTask(data, index, client):
     if(rowData['publish_time'] != 0 and rowData['topic'] != "" and rowData['topic'] != "Please Fill Topic"):
         scheduler.enter(rowData['publish_time'] / 1000, 2, publish_message, (json.dumps(rowData), scheduler, client, index,))
 
+# Simple function to send basic value over MQTT
 def publishValue(data):
     jsonData = json.loads(data)
 
     client.publish(jsonData['topic'], random.randint(int(jsonData['value_low']), int(jsonData['value_top'])))
 
+# Simple function to send random image from folder as byte array over MQTT
 def publishImage(data):
     jsonData = json.loads(data)
 
@@ -281,6 +296,7 @@ def publishImage(data):
 
     client.publish(jsonData['topic'], byteArray)
 
+# Simple function to send random json data from folder over MQTT array
 def publishJson(data):
     jsonData = json.loads(data)
 
@@ -299,6 +315,7 @@ def publishJson(data):
     data_out=json.dumps(jsonFromFile)
     client.publish(jsonData['topic'], data_out)
 
+# This function will update all the devices in config.json
 def updateDevices(data):
     jsonData = json.loads(data)
 

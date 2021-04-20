@@ -1,27 +1,28 @@
+"""
+    Script to simulate security camera with a default system camera.
+
+    This script will work with Raspberry Pi with CSI or USB camera or with an ordinary laptop with webcam.
+
+    You need to install python-opencv
+
+    Author: Jakub Smejkal (xsmejk28)
+"""
+
 import cv2
 import sys
 import time
 import getopt
 import paho.mqtt.client as mqtt
 
-
-def on_connect(client, userdata, flags, rc):
-    global connected
-    connected = True
-    
-def on_disconnect(client, userdata, rc):
-   global connected
-   connected = False
-
-def on_message(client, userdata, msg):
-    pass
-
 if __name__ == '__main__':
+    
+    # Default arguments
     brokerAddress = '127.0.0.1'
     brokerPort = 1883
     updateTime = 1
     topic = 'home/living-room/camera'
 
+    # Handle Arguments
     short_options = "a:p:u:t:"
     long_options = ["address=", "port=", "update=", "topic="]
     
@@ -37,6 +38,7 @@ if __name__ == '__main__':
         elif argument in ("-t", "--topic"):
             topic = value
 
+    # Create MQTT client and try to connect
     client = mqtt.Client()
 
     try:
@@ -45,24 +47,31 @@ if __name__ == '__main__':
         print("Can't connect to MQTT broker")
         exit(-1)
 
+    # Start non blocking client loop
     client.loop_start()
 
+    # Start capturing on default system camera
     cam = cv2.VideoCapture(0)
-
     print("Starting sending images from camera")
 
     while True:
-        ret, frame = cam.read()
-        if not ret:
-            print("camera not found")
+        camFounded, frame = cam.read()
+        
+        if(not camFounded):
+            print("Camera not found - Breaking loop")
             break
 
-        _, im_buf_arr = cv2.imencode(".jpg", frame)
-        byte_im = im_buf_arr.tobytes()
-        client.publish(topic, byte_im)
+        # Encode the frame into memory buffer and convert it to bytes
+        _, imageBuffer = cv2.imencode(".jpg", frame)
+        imageBufferBytes = imageBuffer.tobytes()
 
+        # Send the image bytes over MQTT
+        client.publish(topic, imageBufferBytes)
+
+        # Wait before another frame
         time.sleep(updateTime)
 
-    print("sending stopped")
+    print("Sending stopped")
+
+    # Release camera after we are done
     cam.release()
-    cv2.destroyAllWindows()
