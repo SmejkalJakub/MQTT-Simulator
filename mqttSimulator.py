@@ -13,12 +13,13 @@ import sys
 import json
 import time
 import sched
-import string    
+import getopt
+import string
 import random
 import threading
 import PIL.Image as Image
-from PyQt5.QtWidgets import *
 import paho.mqtt.client as mqtt
+from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QDateTime, Qt, QTimer
 
 connected = False
@@ -31,18 +32,21 @@ schedulerEvents = {}
 selectedItem = None
 
 class WidgetGallery(QDialog):
-    def __init__(self, client, data, brokerAddress="127.0.0.1", parent=None, ):
+    def __init__(self, client, data, config, brokerAddress="127.0.0.1", parent=None):
         super(WidgetGallery, self).__init__(parent)
 
         self.setFixedWidth(900)
         self.originalPalette = QApplication.palette()
-        
+        self.config = config
+
         # Some basic QApplication setup
         label = QLabel('Broker')
+
         if(connected):
             self.connectedLabel = QLabel("Connected")
         else:
             self.connectedLabel = QLabel("Disconnected")
+
         button = QPushButton('Connect')
         button.clicked.connect(self.on_connect_button_clicked)
         self.lineEdit = QLineEdit(brokerAddress)
@@ -64,7 +68,6 @@ class WidgetGallery(QDialog):
         self.removeDeviceButton.setEnabled(False)
         addDevicehbox.addWidget(self.removeDeviceButton)
         # End of basic setup
-
 
         # Load JSON data and setup the table widget
         self.jsonData = json.loads(data)
@@ -102,7 +105,6 @@ class WidgetGallery(QDialog):
     def itemSelected(self):
         global selectedItem
 
-        print(self.tableWidget.currentItem())
         selectedItem = self.tableWidget.currentItem().row()
         self.removeDeviceButton.setEnabled(True)
 
@@ -122,21 +124,11 @@ class WidgetGallery(QDialog):
     # Remove button click callback(WORK IN PROGRESS)
     def removeDeviceButtonClick(self):
         global selectedItem
-        self.tableWidget.removeRow(selectedItem)
+        
+        del self.jsonData['mqtt_devices'][selectedItem]
 
-        _selectedItem = selectedItem + 1
-
-        print(self.tableWidget.getItem(selectedItem))
-
-        del self.jsonData['mqtt_devices'][_selectedItem]
-
-        if(_selectedItem in schedulerEvents.keys()):
-            scheduler.cancel(schedulerEvents[_selectedItem])
-
-        for i in range(selectedItem, self.tableWidget.rowCount()):
-            print(i)
-
-        self.removeDeviceButton.setEnabled(False)
+        saveJson(json.dumps(self.jsonData), self.config)
+        os.execl(sys.executable, sys.executable, *sys.argv)
 
     # Add new device to the end of list 
     def addDeviceButtonClick(self):
@@ -159,7 +151,7 @@ class WidgetGallery(QDialog):
 
         self.tableWidget.setRowCount(self.tableWidget.rowCount() + 1)
 
-        saveJson(json.dumps(self.jsonData))
+        saveJson(json.dumps(self.jsonData), self.config)
 
         for (collumn, value) in enumerate(self.jsonData['mqtt_devices'][self.tableWidget.rowCount() - 1].values()):
             self.addItem(self.tableWidget, self.tableWidget.rowCount() - 1, collumn, value)
@@ -172,9 +164,6 @@ class WidgetGallery(QDialog):
     # Callback detecting change of a cell
     def cellChanged(self, row, column):
         keys = list(self.jsonData['mqtt_devices'][row].keys())
-
-        print(column)
-        print(keys[column])
 
         if(keys[column] == "value"):
             client.publish(self.tableWidget.item(row, 6).text(), self.tableWidget.item(row, column).text())
@@ -191,7 +180,7 @@ class WidgetGallery(QDialog):
         
         resetTask(json.dumps(self.jsonData), row, client)
 
-        saveJson(json.dumps(self.jsonData))
+        saveJson(json.dumps(self.jsonData), self.config)
 
     # Connect button callback that will try to connect to selected MQTT broker
     def on_connect_button_clicked(self):
@@ -215,7 +204,7 @@ class WidgetGallery(QDialog):
                 self.tableWidget.item(row, 8).setText(message)
                 self.tableWidget.resizeColumnsToContents()
                 self.jsonData['mqtt_devices'][row]['value'] = self.tableWidget.item(row, 8).text()
-                saveJson(json.dumps(self.jsonData))
+                saveJson(json.dumps(self.jsonData), self.config)
 
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -255,18 +244,19 @@ def publish_message(data, scheduler, client, index):
         schedulerEvents[index] = scheduler.enter(jsonData['publish_time'] / 1000, 2, publish_message, (json.dumps(jsonData), scheduler, client, index,))
 
 # Function to save the configuration if anything changes
-def saveJson(data):
-    outFile = open("config.json", "w")
-    outFile.write(json.dumps(json.loads(data), indent=4, sort_keys=True))
-    outFile.close()
+def saveJson(data, fileName):
+    with open(configFile, 'w') as outFile:
+        outFile.write(json.dumps(json.loads(data), indent=4, sort_keys=True))
 
 # This function serves to reset task after the cell change
 def resetTask(data, index, client):
-    if(index in schedulerEvents.keys()):
-        scheduler.cancel(schedulerEvents[index])
-
     jsonData = json.loads(data)
     rowData = jsonData['mqtt_devices'][index]
+
+    if(index in schedulerEvents.keys()):
+        scheduler.cancel(schedulerEvents[index])
+        if(rowData['publish_time'] == 0):
+            del schedulerEvents[index]
 
     if(rowData['publish_time'] != 0 and rowData['topic'] != "" and rowData['topic'] != "Please Fill Topic"):
         scheduler.enter(rowData['publish_time'] / 1000, 2, publish_message, (json.dumps(rowData), scheduler, client, index,))
@@ -274,7 +264,6 @@ def resetTask(data, index, client):
 # Simple function to send basic value over MQTT
 def publishValue(data):
     jsonData = json.loads(data)
-
     client.publish(jsonData['topic'], random.randint(int(jsonData['value_low']), int(jsonData['value_top'])))
 
 # Simple function to send random image from folder as byte array over MQTT
@@ -332,14 +321,46 @@ def on_message(client, userdata, msg):
     # Change the value present in table
     gallery.changeValue(msg.topic, (msg.payload).decode('utf-8'))
 
+def showHelp():
+    print("\nMQTT simulator that will send MQTT messages based on configuration file\n")
+    print("Arguments: ")
+    print("\t-n --no-ui: will run this script without showing the UI (for terminal usage)")
+    print("\t-h --help: Shows this message and ends the script with code 1")
+
 if __name__ == '__main__':
     
+    showUI = True
+    configFile = "config.json"
+
+    # Handle Arguments
+    short_options = "nhc:"
+    long_options = ["no-ui", "help", "config="]
+    
+    try:
+        arguments, values = getopt.getopt(sys.argv[1:], short_options, long_options)
+    except:
+        print("\nWrong arguments")
+        showHelp()
+        exit(-1)
+
+    for argument, value in arguments:
+        if argument in ("-n", "--no-ui"):
+            showUI = False
+        if argument in ("-h", "--help"):
+            showHelp()
+            exit(1)
+        if argument in ("-c", "--config"):
+            if(os.path.exists(value) and value.endswith((".json"))):
+                configFile = value
+            else:
+                print("\nChoose existing configuration file")
+                showHelp()
+                exit(-1)
+
+
     # Load the data from config
-    if(os.path.exists('config.json')):
-        with open('config.json') as f:
-            data = json.load(f)
-    else:
-        f = open('config.json', 'x')
+    with open(configFile) as f:
+        data = json.load(f)
 
     # Start and configure MQTT Client
     client = mqtt.Client()
@@ -348,7 +369,7 @@ if __name__ == '__main__':
     client.on_message = on_message
     client.connect(data['broker'], data['broker-port'], 60)
     updateDevices(json.dumps(data))
-
+    
     # Start the scheduler;
     t = threading.Thread(target=scheduler.run)
     t.start()
@@ -356,9 +377,12 @@ if __name__ == '__main__':
     # Start listening loop without blocking the whole program
     client.loop_start()
 
-    # Create the QApplication UI
-    app = QApplication([])
-    gallery = WidgetGallery(brokerAddress=data['broker'], client=client, data=json.dumps(data))
-    gallery.show()
+    print("Starting sending messages to the broker: " + str(data['broker']) + " on port: " + str(data['broker-port']))
 
-    sys.exit(app.exec_()) 
+    # Create the QApplication UI
+    if(showUI):
+        app = QApplication([])
+        gallery = WidgetGallery(brokerAddress=data['broker'], client=client, data=json.dumps(data), config=configFile)
+        gallery.show()
+
+        sys.exit(app.exec_())
