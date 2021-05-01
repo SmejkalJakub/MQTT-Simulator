@@ -4,7 +4,7 @@ MQTT Simulator for experimenting with MQTT messages.
 This code was created for school project and bachelor thesis
 
 Authors: Jakub Smejkal (xsmejk28)
-         Tomáš Staněk (xstane44)
+         Tomáš Stanek (xstane44)
 """
 
 import io
