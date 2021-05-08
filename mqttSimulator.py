@@ -73,9 +73,24 @@ class WidgetGallery(QDialog):
         self.jsonData = json.loads(data)
         numberOfDevices = len(self.jsonData['mqtt_devices'])
 
-        self.tableWidget = QTableWidget(numberOfDevices, len(self.jsonData['mqtt_devices'][0].keys()))
 
-        keys = list(self.jsonData['mqtt_devices'][0].keys())
+        keys = [
+            "device_type",
+            "images_dir",
+            "json_dir",
+            "name",
+            "publish_time",
+            "subscribe",
+            "topic",
+            "type",
+            "value",
+            "value_low",
+            "value_top",
+        ]
+        
+        self.tableWidget = QTableWidget(numberOfDevices, len(keys))
+
+        #keys = list(self.jsonData['mqtt_devices'][0].keys())
 
         self.tableWidget.setHorizontalHeaderLabels(keys)
 
