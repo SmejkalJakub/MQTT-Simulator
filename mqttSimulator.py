@@ -201,16 +201,11 @@ class WidgetGallery(QDialog):
     def on_connect_button_clicked(self):
         client.disconnect()
         client.loop_stop()
+        
+        self.jsonData["broker"] = self.lineEdit.text()
+        saveJson(json.dumps(self.jsonData), self.config)
 
-        try:
-            client.connect(self.lineEdit.text(), 1883, 60)
-
-            client.loop_start()
-            subscribeToAllTopics(client)
-
-            self.connectedLabel.setText("Connected")
-        except:
-            self.connectedLabel.setText("Disconnected")
+        os.execl(sys.executable, sys.executable, *sys.argv)
 
     # This function is called whenever the MQTT message is received and it changes the value of desired cell
     def changeValue(self, topic, message):
