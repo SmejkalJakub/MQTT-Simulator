@@ -1,4 +1,4 @@
 opencv-python==4.5.1.48
+Pillow==2.2.2
 paho-mqtt==1.5.1
 PyQt5>=5
-Pillow==2.2.2
