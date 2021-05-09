@@ -1,5 +1,5 @@
 """
-MQTT Simulator for experimenting with MQTT messages.
+MQTT Simulator for experimenting with MQTT messages
 
 This code was created for school project and bachelor thesis
 

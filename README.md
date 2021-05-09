@@ -1,4 +1,4 @@
-# MQTT-Simulator **WORK IN PROGRESS**
+# MQTT-Simulator
 MQTT simulator for some basic elements like thermometers, cameras or some actuators.
 
 You can configure your simulation with config.json file or in the actual program in the table.
